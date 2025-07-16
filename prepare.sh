@@ -1,25 +1,25 @@
 #!/bin/bash
 # This script is for debian only
 
-# install tcpreplay
-sudo apt-get install tcpreplay
+# install tcpreplay and wget
+sudo apt-get install tcpreplay wget
 
 # clone https://github.com/sbousseaden/PCAP-ATTACK.git
-git clone https://github.com/sbousseaden/PCAP-ATTACK.git
+# git clone https://github.com/sbousseaden/PCAP-ATTACK.git
 
-# list all network interfaces with ip address
-echo "List all network interfaces with ip address"
-ip addr show
+echo "List all pcap files in mta2025"
+ls -R mta2025/*.pcap
 
-echo "List all pcapng files in sbousseaden/PCAP-ATTACK"
-ls -R PCAP-ATTACK/*.pcapng
-
-
-# iterate over network interfaces and for each interface replay pcapng file from all subfolders of PCAP-ATTACK folder
+wget https://www.dropbox.com/scl/fi/3r0psthr423l0kepmp7mz/mta2025.zip\?rlkey\=h59iyrcyga7qnyrd1jq2fsbwm
+unzip mta2025.zip
 for interface in $(ip link show | grep "state UP" | awk '{print $2}' | cut -d: -f1); do
-    for file in PCAP-ATTACK/*/*.pcapng; do
-        echo "Replaying $file on $interface"
-        sudo tcpreplay -i $interface $file
-    done
+    echo "Interface: $interface"
 done
-    
+
+read -p "Interface: " interface
+
+for file in mta2025/*.pcap; do
+    echo "Replaying $file on $interface"
+    sudo tcpreplay -i $interface $file
+done
+
