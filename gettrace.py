@@ -168,7 +168,7 @@ def download_traffic_captures(
     logger.info(f"Retrieved {len(alerts)} alerts")
     
     # 4. Filter alerts to only include those with PACKET_TRACE=true
-    alerts_with_packet_trace = [alert for alert in alerts if alert.get("PACKET_TRACE") == "true"]
+    alerts_with_packet_trace = [alert for alert in alerts if alert.get("PACKET_TRACE") == "1"]
     result["alerts_with_packet_trace"] = len(alerts_with_packet_trace)
     logger.info(f"Found {len(alerts_with_packet_trace)} alerts with packet trace")
     
