@@ -157,6 +157,7 @@ def download_traffic_captures(
         
         reader = csv.DictReader(csv_data)
         for row in reader:
+            print(row)
             alerts.append(row)
     except Exception as e:
         logger.error(f"Failed to parse alerts data: {str(e)}")
