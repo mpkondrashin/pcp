@@ -165,7 +165,7 @@ class SMSClient:
 
 def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_time: Union[datetime, int], output_dir: str):
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
-        alert_id = alert["EVENT_ID"]
+        alert_id = alert["DEVICE_TRACE_BEGIN_SEQ"]
         pcap_data = sms.get_traffic_capture(alert_id)
         pcap_data_sha1 = hashlib.sha1(pcap_data).hexdigest()
         alert_description = sms.get_signature(alert["SIGNATURE_ID"]).DESCRIPTION
