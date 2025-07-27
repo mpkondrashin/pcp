@@ -15,6 +15,106 @@ import requests
 from datetime import datetime
 from typing import Union, Dict, List, Optional, Any, Tuple
 
+class SMSClient:
+    def __init__(
+        self,
+        sms_server: str,
+        auth_type: str = "api_key",
+        api_key: Optional[str] = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
+        verify_ssl: bool = True
+    ):
+        self.sms_server = sms_server
+        self.auth_type = auth_type
+        self.api_key = api_key
+        self.username = username
+        self.password = password
+        self.verify_ssl = verify_ssl
+
+    def get(self, url: str, params: Optional[Dict[str, str]] = None) -> requests.Response:
+        """
+        Make a GET request to the SMS server.
+        
+        Parameters:
+        -----------
+        url : str
+            The URL to make the request to
+        params : dict, optional
+            Query parameters for the request (default: None)
+        
+        Returns:
+        --------
+        requests.Response
+            The response from the server
+        
+        Raises:
+        -------
+        ConnectionError
+            If connection to the SMS server fails
+        AuthenticationError
+            If authentication fails
+        APIError
+            If the API returns an error
+        """
+        session = requests.Session()
+        session.verify = self.verify_ssl
+        
+        if self.auth_type == "api_key":
+            session.headers.update({"X-SMS-API-KEY": self.api_key})
+        else:  # http_basic
+            session.auth = (self.username, self.password)
+        
+        try:
+            response = session.get(url, params=params)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.RequestException as e:
+            raise ConnectionError(f"Failed to make GET request: {str(e)}")
+
+    def iterate_alerts(
+        self,
+        start_time: Union[datetime, int],
+        end_time: Union[datetime, int],
+    ) -> List[Dict[str, str]]:
+        url = f"{self.sms_server}/dbAccess/tptDBServlet"
+        if isinstance(start_time, datetime):
+            start_time = int(start_time.timestamp() * 1000)
+        if isinstance(end_time, datetime):
+            end_time = int(end_time.timestamp() * 1000)
+        params = {
+            "method": "GetData",
+            "table": "ALERTS",
+            "begin_time": start_time,
+            "end_time": end_time,
+            "format": "csv"
+        }
+        response = self.get(url, params=params)
+                
+        try:
+            csv_data = response.text.splitlines()
+            if not csv_data:
+                logger.warning("No alerts found in the specified time interval")
+                return []
+            reader = csv.DictReader(csv_data)
+            for row in reader:
+                yield row
+        except Exception as e:
+            logger.error(f"Failed to parse alerts data: {str(e)}")
+            raise ValueError(f"Failed to parse alerts data: {str(e)}")
+    
+    
+    def iterate_alerts_with_packet_trace(
+        self,
+        start_time: Union[datetime, int],
+        end_time: Union[datetime, int],
+    ) -> List[Dict[str, str]]:
+        for alert in self.iterate_alerts(start_time, end_time):
+            if alert.get("PACKET_TRACE") != "1":
+                continue
+            yield alert
+
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,175 +122,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger('sms_traffic_capture')
 
-def list_alert_event_ids(
-    sms_server: str,
-    start_time: Union[datetime, int],
-    end_time: Union[datetime, int],
-    auth_type: str = "api_key",
-    api_key: Optional[str] = None,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
-    verify_ssl: bool = True,
-    max_alerts: Optional[int] = None,
-    only_with_packet_trace: bool = True
-) -> List[Dict[str, str]]:
-    """
-    List event IDs for alerts in the specified time interval.
-    
-    Parameters:
-    -----------
-    sms_server : str
-        The SMS server URL (e.g., "https://sms.example.com")
-    start_time : datetime or int
-        Start time of the interval (datetime object or milliseconds since epoch)
-    end_time : datetime or int
-        End time of the interval (datetime object or milliseconds since epoch)
-    auth_type : str, optional
-        Authentication type: "api_key" or "http_basic" (default: "api_key")
-    api_key : str, optional
-        API key for authentication (required if auth_type is "api_key")
-    username : str, optional
-        Username for HTTP basic authentication (required if auth_type is "http_basic")
-    password : str, optional
-        Password for HTTP basic authentication (required if auth_type is "http_basic")
-    verify_ssl : bool, optional
-        Whether to verify SSL certificates (default: True)
-    max_alerts : int, optional
-        Maximum number of alerts to process (default: None, process all alerts)
-    only_with_packet_trace : bool, optional
-        Whether to only include alerts with packet traces available (default: True)
-    
-    Returns:
-    --------
-    list of dict
-        List of dictionaries containing event ID information for each alert:
-        [
-            {
-                "device_id": "123",
-                "alert_type": "456",
-                "sequence_num": "789",
-                "event_id": "123,456,789",  # Combined event ID format used by the API
-                "timestamp": "1627384950000",
-                "severity": "Critical",
-                "has_packet_trace": True
-            },
-            ...
-        ]
-    
-    Raises:
-    -------
-    ValueError
-        If required parameters are missing or invalid
-    ConnectionError
-        If connection to the SMS server fails
-    AuthenticationError
-        If authentication fails
-    APIError
-        If the API returns an error
-    """
-    # 1. Parameter Validation
-    logger.info("Validating parameters...")
-    
-    # Validate SMS server URL
-    if not sms_server:
-        raise ValueError("SMS server URL is required")
-    if not sms_server.startswith(("http://", "https://")):
-        sms_server = f"https://{sms_server}"
-    
-    # Validate authentication parameters
-    if auth_type == "api_key" and not api_key:
-        raise ValueError("API key is required when auth_type is 'api_key'")
-    if auth_type == "http_basic" and (not username or not password):
-        raise ValueError("Username and password are required when auth_type is 'http_basic'")
-    
-    # Convert datetime objects to milliseconds if needed
-    if isinstance(start_time, datetime):
-        start_time = int(start_time.timestamp() * 1000)
-    if isinstance(end_time, datetime):
-        end_time = int(end_time.timestamp() * 1000)
-    
-    # 2. Authentication Setup
-    logger.info("Setting up authentication...")
-    session = requests.Session()
-    session.verify = verify_ssl
-    
-    if auth_type == "api_key":
-        session.headers.update({"X-SMS-API-KEY": api_key})
-    else:  # http_basic
-        session.auth = (username, password)
-    
-    # 3. Retrieve Alerts
-    logger.info(f"Retrieving alerts from {start_time} to {end_time}...")
-    
-    # Construct the URL for the GetData API endpoint
-    alerts_url = f"{sms_server}/dbAccess/tptDBServlet"
-    params = {
-        "method": "GetData",
-        "table": "ALERTS",
-        "begin_time": start_time,
-        "end_time": end_time,
-        "format": "csv"
-    }
-    
-    if max_alerts:
-        params["limit"] = max_alerts
-    
-    try:
-        response = session.get(alerts_url, params=params)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to retrieve alerts: {str(e)}")
-        raise ConnectionError(f"Failed to retrieve alerts: {str(e)}")
-    
-    # Parse the CSV response
-    alerts = []
-    try:
-        csv_data = response.text.splitlines()
-        if not csv_data:
-            logger.warning("No alerts found in the specified time interval")
-            return []
-        
-        reader = csv.DictReader(csv_data)
-        for row in reader:
-            alerts.append(row)
-    except Exception as e:
-        logger.error(f"Failed to parse alerts data: {str(e)}")
-        raise ValueError(f"Failed to parse alerts data: {str(e)}")
-    
-    logger.info(f"Retrieved {len(alerts)} alerts")
-    
-    # 4. Filter alerts if needed and extract event IDs
-    result = []
-    for alert in alerts:
-        has_packet_trace = alert.get("PACKET_TRACE") == "1"
-        
-        # Skip alerts without packet trace if only_with_packet_trace is True
-        if only_with_packet_trace and not has_packet_trace:
-            continue
-        
-        # Extract alert attributes
-        device_id = alert.get("DEVICE_ID", "unknown")
-        sequence_num = alert.get("SEQUENCE_NUM", "unknown")
-        alert_type = alert.get("ALERT_TYPE_ID", "unknown")
-        timestamp = alert.get("END_TIME", str(int(time.time() * 1000)))
-        severity = alert.get("SEVERITY", "unknown")
-        
-        # Create the event ID in the format expected by the API
-        event_id = f"{device_id},{alert_type},{sequence_num}"
-        
-        # Add to result list
-        result.append({
-            "device_id": device_id,
-            "alert_type": alert_type,
-            "sequence_num": sequence_num,
-            "event_id": event_id,
-            "timestamp": timestamp,
-            "severity": severity,
-            "has_packet_trace": has_packet_trace
-        })
-    
-    logger.info(f"Found {len(result)} alerts{' with packet trace' if only_with_packet_trace else ''}")
-    return result
 
 def download_traffic_captures(
     sms_server: str,
@@ -567,28 +498,22 @@ if __name__ == "__main__":
         start_time = end_time - timedelta(hours=args.hours)
     
     if args.list_only:
-        # Just list the event IDs
-        event_ids = list_alert_event_ids(
+        sms = SMSClient(
             sms_server=args.server,
-            start_time=start_time,
-            end_time=end_time,
             auth_type=args.auth_type,
             api_key=args.api_key,
             username=args.username,
             password=args.password,
-            verify_ssl=not args.no_verify_ssl,
-            max_alerts=args.max_alerts
+            verify_ssl=not args.no_verify_ssl
         )
-        
-        print(f"\nFound {len(event_ids)} alerts with packet traces:")
-        for i, alert in enumerate(event_ids, 1):
-            print(f"{i}. Event ID: {alert['event_id']}")
-            print(f"   Device ID: {alert['device_id']}")
-            print(f"   Alert Type: {alert['alert_type']}")
-            print(f"   Sequence Number: {alert['sequence_num']}")
-            print(f"   Timestamp: {alert['timestamp']}")
-            print(f"   Severity: {alert['severity']}")
+        # Just list the event IDs
+        for alert in sms.iterate_alerts_with_packet_trace(
+            start_time=start_time,
+            end_time=end_time
+        ):
+            print(f"Event ID: {alert}")
             print()
+        sys.exit(0)
     else:
         # Run the download function
         result = download_traffic_captures(
@@ -604,6 +529,20 @@ if __name__ == "__main__":
             max_alerts=args.max_alerts,
             filename_format=args.filename_format
         )
+        
+        # Print summary
+        print("\nOperation Summary:")
+        print(f"Total alerts: {result['total_alerts']}")
+        print(f"Alerts with packet trace: {result['alerts_with_packet_trace']}")
+        print(f"Successful downloads: {result['successful_downloads']}")
+        print(f"Failed downloads: {result['failed_downloads']}")
+        
+        if result['errors']:
+            print("\nErrors:")
+            for error in result['errors']:
+                print(f"  - {error}")
+            print()
+            sys.exit(1)
         
         # Print summary
         print("\nOperation Summary:")
