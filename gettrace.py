@@ -71,7 +71,7 @@ class SMSClient:
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:  # http_basic
             session.auth = (self.username, self.password)
-        
+        print(params)
         response = session.get("https://" + self.sms_server + url, params=params, files=files)
         response.raise_for_status()
         return response
