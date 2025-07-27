@@ -72,12 +72,9 @@ class SMSClient:
         else:  # http_basic
             session.auth = (self.username, self.password)
         
-        try:
-            response = session.get("https://" + self.sms_server + url, params=params, files=files)
-            response.raise_for_status()
-            return response
-        except requests.exceptions.RequestException as e:
-            raise ConnectionError(f"Failed to make GET request: {str(e)}")
+        response = session.get("https://" + self.sms_server + url, params=params, files=files)
+        response.raise_for_status()
+        return response
 
     def iterate_alerts(
         self,
