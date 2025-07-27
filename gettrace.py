@@ -141,18 +141,13 @@ class SMSClient:
             "format": "csv"
         }
         response = self.get(url, params=params)
-                
-        try:
-            csv_data = response.text.splitlines()
-            if not csv_data:
-                logger.warning("No signatures found")
-                return []
-            reader = csv.DictReader(csv_data)
-            for row in reader:
-                yield Signature(row["ID"], row["NUM"], row["SEVERITY_ID"], row["NAME"], row["CLASS"], row["PRODUCT_CATEGORY_ID"], row["PROTOCOL"], row["TAXONOMY_ID"], row["CVE_ID"], row["BUGTRAQ_ID"], row["DESCRIPTION"], row["MESSAGE"])
-        except Exception as e:
-            logger.error(f"Failed to parse signatures data: {str(e)}")
-            raise ValueError(f"Failed to parse signatures data: {str(e)}")
+        csv_data = response.text.splitlines()
+        if not csv_data:
+            logger.warning("No signatures found")
+            return []
+        reader = csv.DictReader(csv_data)
+        for row in reader:
+            yield Signature(row["ID"], row["NUM"], row["SEVERITY_ID"], row["NAME"], row["CLASS"], row["PRODUCT_CATEGORY_ID"], row["PROTOCOL"], row["TAXONOMY_ID"], row["CVE_ID"], row["BUGTRAQ_ID"], row["DESCRIPTION"], row["MESSAGE"])
 
     def populate_signatures_dict(self):
         for signature in self.iterate_signatures():
