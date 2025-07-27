@@ -14,11 +14,12 @@ import logging
 import tempfile
 import requests
 from datetime import datetime
-from typing import NamedTuple, Union, Dict, List, Optional, Any, Tuple
+from typing import  Union, Dict, List, Optional, Any, Tuple
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+from collections import namedtuple
 
-Signature = NamedTuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
+Signature = namedtuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
 
 class SMSClient:
     def __init__(
