@@ -19,6 +19,10 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from collections import namedtuple
 import hashlib
+import http.client as http_client
+http_client.HTTPConnection.debuglevel = 1
+
+
 
 Signature = namedtuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
 
@@ -67,7 +71,7 @@ class SMSClient:
         """
         session = requests.Session()
         session.verify = self.verify_ssl
-        
+        session.headers.update({'Expect': ''})
         if self.auth_type == "api_key":
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:  # http_basic
@@ -79,7 +83,7 @@ class SMSClient:
     def post(self, url: str, params: Optional[Dict[str, str]] = None, files: Optional[Dict[str, Tuple[str, bytes]]] = None) -> requests.Response:
         session = requests.Session()
         session.verify = self.verify_ssl
-        
+        session.headers.update({'Expect': ''})
         if self.auth_type == "api_key":
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:  # http_basic
