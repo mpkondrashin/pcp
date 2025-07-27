@@ -39,7 +39,7 @@ class SMSClient:
         self.verify_ssl = verify_ssl
         self.signatures = {}
 
-    def get(self, url: str, params: Optional[Dict[str, str]] = None) -> requests.Response:
+    def get(self, url: str, params: Optional[Dict[str, str]] = None, files = None) -> requests.Response:
         """
         Make a GET request to the SMS server.
         
@@ -73,7 +73,7 @@ class SMSClient:
             session.auth = (self.username, self.password)
         
         try:
-            response = session.get("https://" + self.sms_server + url, params=params)
+            response = session.get("https://" + self.sms_server + url, params=params, files=files)
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
