@@ -39,7 +39,7 @@ class SMSClient:
         self.verify_ssl = verify_ssl
         self.signatures = {}
 
-    def get(self, url: str, params: Optional[Dict[str, str]] = None, files = None) -> requests.Response:
+    def get(self, url: str, params: Optional[Dict[str, str]] = None) -> requests.Response:
         """
         Make a GET request to the SMS server.
         
@@ -71,8 +71,19 @@ class SMSClient:
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:  # http_basic
             session.auth = (self.username, self.password)
-        print(params)
-        response = session.get("https://" + self.sms_server + url, params=params, files=files)
+        response = session.get("https://" + self.sms_server + url, params=params)
+        response.raise_for_status()
+        return response
+
+    def post(self, url: str, params: Optional[Dict[str, str]] = None, files: Optional[Dict[str, Tuple[str, bytes]]] = None) -> requests.Response:
+        session = requests.Session()
+        session.verify = self.verify_ssl
+        
+        if self.auth_type == "api_key":
+            session.headers.update({"X-SMS-API-KEY": self.api_key})
+        else:  # http_basic
+            session.auth = (self.username, self.password)
+        response = session.post("https://" + self.sms_server + url, params=params, files=files)
         response.raise_for_status()
         return response
 
@@ -155,7 +166,7 @@ class SMSClient:
         pcap_url = "/pcaps/getByEventIds"
         with open(temp_file_path, 'rb') as f:
             files = {'file': f}
-            pcap_response = self.get(pcap_url, files=files)
+            pcap_response = self.post(pcap_url, files=files)
             pcap_response.raise_for_status()
             return pcap_response.content
 
