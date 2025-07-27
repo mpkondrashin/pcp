@@ -155,6 +155,7 @@ class SMSClient:
             self.signatures[signature.ID] = signature
 
     def get_signature(self, signature_id: str) -> Optional[Signature]:
+        print(f"get_signature {signature_id}")
         return self.signatures.get(signature_id)
 
     def get_traffic_capture(self, alert_id: str):
@@ -240,6 +241,10 @@ if __name__ == "__main__":
         password=args.password,
         verify_ssl=not args.no_verify_ssl
     )
+
+    print("populate_signatures_dict")
+    sms.populate_signatures_dict()
+
     # Run the download function
     result = get_traffic_captures(
         sms,
