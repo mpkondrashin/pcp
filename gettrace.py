@@ -15,6 +15,8 @@ import tempfile
 import requests
 from datetime import datetime
 from typing import Union, Dict, List, Optional, Any, Tuple
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class SMSClient:
     def __init__(
