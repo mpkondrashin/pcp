@@ -9,6 +9,7 @@ from a TippingPoint Security Management System (SMS) within a specified time int
 import os
 import csv
 import time
+import sys
 import logging
 import tempfile
 import requests
