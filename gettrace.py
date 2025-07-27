@@ -20,8 +20,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 Signature = NamedTuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
 
-PCAP = NamedTuple("PCAP", ["DESCRIPTION", "PCAP_DATA"])
-
 class SMSClient:
     def __init__(
         self,
