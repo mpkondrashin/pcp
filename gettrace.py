@@ -66,7 +66,7 @@ class SMSClient:
             session.auth = (self.username, self.password)
         
         try:
-            response = session.get(url, params=params)
+            response = session.get("https://" + self.sms_server + url, params=params)
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
@@ -77,7 +77,7 @@ class SMSClient:
         start_time: Union[datetime, int],
         end_time: Union[datetime, int],
     ) -> List[Dict[str, str]]:
-        url = f"{self.sms_server}/dbAccess/tptDBServlet"
+        url = "/dbAccess/tptDBServlet"
         if isinstance(start_time, datetime):
             start_time = int(start_time.timestamp() * 1000)
         if isinstance(end_time, datetime):
