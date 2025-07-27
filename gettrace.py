@@ -236,9 +236,7 @@ if __name__ == "__main__":
         sms,
         start_time,
         end_time,
-        args.output_dir,
-        args.max_alerts,
-        args.filename_format
+        args.output_dir
     )
     # Print summary
     print("\nOperation Summary:")
