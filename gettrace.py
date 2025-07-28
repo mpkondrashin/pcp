@@ -157,11 +157,10 @@ class SMSClient:
             return pcap_response.content
 
 
-def hash_normalized_pcap(pcap_file):
-    packets = rdpcap(pcap_file)
+def hash_normalized_pcap(pcap_data: bytes) -> str:
+    packets = rdpcap(BytesIO(pcap_data))
     payloads = b"".join(bytes(pkt) for pkt in packets)
     return hashlib.sha1(payloads).hexdigest()
-
 
 def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_time: Union[datetime, int], output_dir: str):
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
