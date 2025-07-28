@@ -63,6 +63,7 @@ def get_traffic_captures(sms: SMSClient, syslog_file: str, output_dir: str):
         for line in f:
             match = re.search(r'alert=([^\s]+)\s+eventId=([^\s]+)', line)
             if not match:
+                logger.warning(f"No match found for line: {line}")
                 continue
             alert_text = match.group(1)
             event_id = match.group(2)
