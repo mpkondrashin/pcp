@@ -82,7 +82,7 @@ class SMSClient:
         response.raise_for_status()
         return response
 
-    def post(self, url: str, params: Optional[Dict[str, str]] = None, files: Optional[Dict[str, Tuple[str, bytes]]] = None) -> requests.Response:
+    def post(self, url: str, params: Optional[Dict[str, str]] = None, files: Optional[Dict[str, Tuple[str, bytes]]] = None, data: Optional[str] = None) -> requests.Response:
         session = requests.Session()
         session.verify = self.verify_ssl
         #session.headers.update({'Expect': ''})
@@ -90,7 +90,7 @@ class SMSClient:
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:
             session.auth = (self.username, self.password)
-        response = session.post("https://" + self.sms_server + url, params=params, files=files)
+        response = session.post("https://" + self.sms_server + url, params=params, files=files, data=data)
         response.raise_for_status()
         return response
 
