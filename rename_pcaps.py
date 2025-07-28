@@ -72,4 +72,4 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    rename_pcaps(args.pcaps_folder, args.syslog_file)
+    rename_pcaps(args.syslog_file, args.pcaps_folder)
