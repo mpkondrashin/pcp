@@ -35,6 +35,7 @@ def rename_pcap(alert_id, alert_text, output_dir):
     if not os.path.exists(file_name):
         logger.warning(f"File {file_name} does not exist")
         return
+    print(f"File exists {file_name}")
     pcap_data = open(file_name, "rb").read()
     if len(pcap_data) == 0:
         os.remove(file_name)
@@ -47,6 +48,7 @@ def rename_pcap(alert_id, alert_text, output_dir):
             return
     except UnicodeDecodeError:
         return
+    print("File is not empty")
     pcap_data_sha1 = hash_normalized_pcap(pcap_data)
     alert_text = sanitize_string_for_using_as_filename(alert_text)
     output_filename = f"{alert_text}_{pcap_data_sha1}.pcap"
