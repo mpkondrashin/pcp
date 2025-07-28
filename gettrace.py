@@ -22,8 +22,6 @@ import hashlib
 import http.client as http_client
 http_client.HTTPConnection.debuglevel = 1
 
-
-
 Signature = namedtuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
 
 class SMSClient:
@@ -71,7 +69,7 @@ class SMSClient:
         """
         session = requests.Session()
         session.verify = self.verify_ssl
-        session.headers.update({'Expect': ''})
+        #session.headers.update({'Expect': ''})
         if self.auth_type == "api_key":
             session.headers.update({"X-SMS-API-KEY": self.api_key})
         else:  # http_basic
@@ -83,10 +81,10 @@ class SMSClient:
     def post(self, url: str, params: Optional[Dict[str, str]] = None, files: Optional[Dict[str, Tuple[str, bytes]]] = None) -> requests.Response:
         session = requests.Session()
         session.verify = self.verify_ssl
-        session.headers.update({'Expect': ''})
+        #session.headers.update({'Expect': ''})
         if self.auth_type == "api_key":
             session.headers.update({"X-SMS-API-KEY": self.api_key})
-        else:  # http_basic
+        else:
             session.auth = (self.username, self.password)
         response = session.post("https://" + self.sms_server + url, params=params, files=files)
         response.raise_for_status()
@@ -110,18 +108,13 @@ class SMSClient:
             "format": "csv"
         }
         response = self.get(url, params=params)
-                
-        try:
-            csv_data = response.text.splitlines()
-            if not csv_data:
-                logger.warning("No alerts found in the specified time interval")
-                return []
-            reader = csv.DictReader(csv_data)
-            for row in reader:
-                yield row
-        except Exception as e:
-            logger.error(f"Failed to parse alerts data: {str(e)}")
-            raise ValueError(f"Failed to parse alerts data: {str(e)}")
+        csv_data = response.text.splitlines()
+        if not csv_data:
+            logger.warning("No alerts found in the specified time interval")
+            return []
+        reader = csv.DictReader(csv_data)
+        for row in reader:
+            yield row
     
     def iterate_alerts_with_packet_trace(
         self,
@@ -134,21 +127,11 @@ class SMSClient:
             yield alert
 
     def iterate_signatures(self):
-        url = "/dbAccess/tptDBServlet"
-        params = {
-            "method": "GetData",
-            "table": "SIGNATURE",
-            "format": "csv"
-        }
-        response = self.get(url, params=params)
-        csv_data = response.text.splitlines()
-        if not csv_data:
-            logger.warning("No signatures found")
-            return []
-        reader = csv.DictReader(csv_data)
-        for row in reader:
-            yield Signature(row["ID"], row["NUM"], row["SEVERITY_ID"], row["NAME"], row["CLASS"], row["PRODUCT_CATEGORY_ID"], row["PROTOCOL"], row["TAXONOMY_ID"], row["CVE_ID"], row["BUGTRAQ_ID"], row["DESCRIPTION"], row["MESSAGE"])
-
+        with open("signatures.csv") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                yield Signature(row["ID"], row["NUM"], row["SEVERITY_ID"], row["NAME"], row["CLASS"], row["PRODUCT_CATEGORY_ID"], row["PROTOCOL"], row["TAXONOMY_ID"], row["CVE_ID"], row["BUGTRAQ_ID"], row["DESCRIPTION"], row["MESSAGE"])
+  
     def populate_signatures_dict(self):
         for signature in self.iterate_signatures():
             self.signatures[signature.ID] = signature
@@ -263,218 +246,3 @@ if __name__ == "__main__":
         for error in result['errors']:
             print(f"  - {error}")
         print()
-        
-
-def download_traffic_captures_DELETE_LATER(
-    sms_server: str,
-    start_time: Union[datetime, int],
-    end_time: Union[datetime, int],
-    output_dir: str,
-    auth_type: str = "api_key",
-    api_key: Optional[str] = None,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
-    verify_ssl: bool = True,
-    max_alerts: Optional[int] = None,
-    filename_format: str = "{device_id}_{alert_type}_{timestamp}_{sequence_num}.pcap"
-) -> Dict[str, Any]:
-    """
-    Download traffic captures for alerts in the specified time interval.
-    
-    Parameters:
-    -----------
-    sms_server : str
-        The SMS server URL (e.g., "https://sms.example.com")
-    start_time : datetime or int
-        Start time of the interval (datetime object or milliseconds since epoch)
-    end_time : datetime or int
-        End time of the interval (datetime object or milliseconds since epoch)
-    output_dir : str
-        Directory where traffic captures will be saved
-    auth_type : str, optional
-        Authentication type: "api_key" or "http_basic" (default: "api_key")
-    api_key : str, optional
-        API key for authentication (required if auth_type is "api_key")
-    username : str, optional
-        Username for HTTP basic authentication (required if auth_type is "http_basic")
-    password : str, optional
-        Password for HTTP basic authentication (required if auth_type is "http_basic")
-    verify_ssl : bool, optional
-        Whether to verify SSL certificates (default: True)
-    max_alerts : int, optional
-        Maximum number of alerts to process (default: None, process all alerts)
-    filename_format : str, optional
-        Format string for output filenames (default: "{device_id}_{alert_type}_{timestamp}_{sequence_num}.pcap")
-        Available placeholders: device_id, alert_type, timestamp, sequence_num, severity
-    
-    Returns:
-    --------
-    dict
-        Summary of the operation with counts of processed alerts and downloaded captures
-    
-    Raises:
-    -------
-    ValueError
-        If required parameters are missing or invalid
-    ConnectionError
-        If connection to the SMS server fails
-    AuthenticationError
-        If authentication fails
-    APIError
-        If the API returns an error
-    """
-    # Initialize result summary
-    result = {
-        "total_alerts": 0,
-        "alerts_with_packet_trace": 0,
-        "successful_downloads": 0,
-        "failed_downloads": 0,
-        "errors": []
-    }
-    
-    # 1. Parameter Validation
-    logger.info("Validating parameters...")
-    
-    # Validate SMS server URL
-    if not sms_server:
-        raise ValueError("SMS server URL is required")
-    if not sms_server.startswith(("http://", "https://")):
-        sms_server = f"https://{sms_server}"
-    
-    # Validate authentication parameters
-    if auth_type == "api_key" and not api_key:
-        raise ValueError("API key is required when auth_type is 'api_key'")
-    if auth_type == "http_basic" and (not username or not password):
-        raise ValueError("Username and password are required when auth_type is 'http_basic'")
-    
-    # Convert datetime objects to milliseconds if needed
-    if isinstance(start_time, datetime):
-        start_time = int(start_time.timestamp() * 1000)
-    if isinstance(end_time, datetime):
-        end_time = int(end_time.timestamp() * 1000)
-    
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 2. Authentication Setup
-    logger.info("Setting up authentication...")
-    session = requests.Session()
-    session.verify = verify_ssl
-    
-    if auth_type == "api_key":
-        session.headers.update({"X-SMS-API-KEY": api_key})
-    else:  # http_basic
-        session.auth = (username, password)
-    
-    # 3. Retrieve Alerts
-    logger.info(f"Retrieving alerts from {start_time} to {end_time}...")
-    
-    # Construct the URL for the GetData API endpoint
-    alerts_url = f"{sms_server}/dbAccess/tptDBServlet"
-    params = {
-        "method": "GetData",
-        "table": "ALERTS",
-        "begin_time": start_time,
-        "end_time": end_time,
-        "format": "csv"
-    }
-    
-    if max_alerts:
-        params["limit"] = max_alerts
-    
-    try:
-        response = session.get(alerts_url, params=params)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Failed to retrieve alerts: {str(e)}")
-        result["errors"].append(f"Failed to retrieve alerts: {str(e)}")
-        return result
-    
-    # Parse the CSV response
-    alerts = []
-    try:
-        csv_data = response.text.splitlines()
-        if not csv_data:
-            logger.warning("No alerts found in the specified time interval")
-            return result
-        
-        reader = csv.DictReader(csv_data)
-        for row in reader:
-            print(row)
-            alerts.append(row)
-    except Exception as e:
-        logger.error(f"Failed to parse alerts data: {str(e)}")
-        result["errors"].append(f"Failed to parse alerts data: {str(e)}")
-        return result
-    
-    result["total_alerts"] = len(alerts)
-    logger.info(f"Retrieved {len(alerts)} alerts")
-    
-    # 4. Filter alerts to only include those with PACKET_TRACE=true
-    alerts_with_packet_trace = [alert for alert in alerts if alert.get("PACKET_TRACE") == "1"]
-    result["alerts_with_packet_trace"] = len(alerts_with_packet_trace)
-    logger.info(f"Found {len(alerts_with_packet_trace)} alerts with packet trace")
-    
-    # 5. Process Alerts and Download Traffic Captures
-    logger.info("Processing alerts and downloading traffic captures...")
-    
-    for alert in alerts_with_packet_trace:
-        try:
-            # Extract alert attributes
-            device_id = alert.get("DEVICE_ID", "unknown")
-            sequence_num = alert.get("SEQUENCE_NUM", "unknown")
-            alert_type = alert.get("ALERT_TYPE_ID", "unknown")
-            timestamp = alert.get("END_TIME", str(int(time.time() * 1000)))
-            severity = alert.get("SEVERITY", "unknown")
-            event_id = alert.get("DEVICE_TRACE_BEGIN_SEQ", "")
-            # Format the output filename
-            filename = filename_format.format(
-                device_id=device_id,
-                alert_type=alert_type,
-                timestamp=timestamp,
-                sequence_num=sequence_num,
-                severity=severity
-            )
-            output_path = os.path.join(output_dir, filename)
-            
-            # Create a temporary file with the event ID
-            with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
-                temp_file.write(f"{event_id}\n")
-                temp_file_path = temp_file.name
-            
-            # Download the packet trace
-            logger.info(f"Downloading packet trace for alert {device_id}:{sequence_num}...")
-            
-            try:
-                # Use the pcaps/getByEventIds endpoint with a POST request
-                pcap_url = f"{sms_server}/pcaps/getByEventIds"
-                with open(temp_file_path, 'rb') as f:
-                    files = {'file': f}
-                    pcap_response = session.post(pcap_url, files=files)
-                    pcap_response.raise_for_status()
-                
-                # Save the response content to the output file
-                with open(output_path, 'wb') as f:
-                    f.write(pcap_response.content)
-                
-                logger.info(f"Successfully downloaded packet trace to {output_path}")
-                result["successful_downloads"] += 1
-            
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to download packet trace for alert {device_id}:{sequence_num}: {str(e)}")
-                result["errors"].append(f"Failed to download packet trace for alert {device_id}:{sequence_num}: {str(e)}")
-                result["failed_downloads"] += 1
-            
-            finally:
-                # Clean up the temporary file
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
-        
-        except Exception as e:
-            logger.error(f"Error processing alert: {str(e)}")
-            result["errors"].append(f"Error processing alert: {str(e)}")
-            result["failed_downloads"] += 1
-    
-    # 6. Return the summary
-    logger.info(f"Operation completed: {result['successful_downloads']} successful downloads, {result['failed_downloads']} failed downloads")
-    return result
