@@ -127,7 +127,7 @@ class SMSClient:
             yield alert
 
     def iterate_signatures(self):
-        with open("signatures.csv") as f:
+        with open("signature.csv") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 yield Signature(row["ID"], row["NUM"], row["SEVERITY_ID"], row["NAME"], row["CLASS"], row["PRODUCT_CATEGORY_ID"], row["PROTOCOL"], row["TAXONOMY_ID"], row["CVE_ID"], row["BUGTRAQ_ID"], row["DESCRIPTION"], row["MESSAGE"])
