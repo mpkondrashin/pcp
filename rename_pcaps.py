@@ -33,18 +33,18 @@ def rename_pcap(alert_id, alert_text, output_dir):
     print(f"Rename PCAP {alert_id} {alert_text}")
     file_name = os.path.join(output_dir, alert_id + ".pcap")
     if not os.path.exists(file_name):
-        logger.warning(f"File {file_name} does not exist")
+        print(f"File {file_name} does not exist")
         return
     print(f"File exists {file_name}")
     pcap_data = open(file_name, "rb").read()
     if len(pcap_data) == 0:
         os.remove(file_name)
-        logger.warning(f"Removed empty file {file_name}")
+        print(f"Removed empty file {file_name}")
         return
     try:
         if "Exception upload exception getting the eventIds file" in pcap_data.decode("utf-8"):
             os.remove(file_name)
-            logger.warning(f"Removed file {file_name}")
+            print(f"Removed file {file_name}")
             return
     except UnicodeDecodeError:
         return
