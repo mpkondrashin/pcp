@@ -168,6 +168,9 @@ def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_t
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
         alert_id = alert["DEVICE_TRACE_BEGIN_SEQ"]
         pcap_data = sms.get_traffic_capture(alert_id)
+        if len(pcap_data) == 0:
+            logger.warning(f"No packet trace found for alert {alert_id}")
+            continue
         pcap_data_sha1 = hash_normalized_pcap(pcap_data)
         alert_description = sms.get_signature(alert["SIGNATURE_ID"]).DESCRIPTION
         alert_description = sanitize_string_for_using_as_filename(alert_description)
