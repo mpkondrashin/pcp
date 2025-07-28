@@ -24,7 +24,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from collections import namedtuple
 import http.client as http_client
-#http_client.HTTPConnection.debuglevel = 1
+http_client.HTTPConnection.debuglevel = 1
 
 Signature = namedtuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
 
@@ -146,6 +146,7 @@ class SMSClient:
 
     def get_traffic_capture(self, alert_id: str):
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+            print(F"Alert ID: {alert_id}")
             temp_file.write(f"{alert_id}\n")
             temp_file_path = temp_file.name
         
@@ -164,6 +165,7 @@ def hash_normalized_pcap(pcap_data: bytes) -> str:
     payloads = b"".join(bytes(pkt) for pkt in packets)
     return hashlib.sha1(payloads).hexdigest()
 
+
 def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_time: Union[datetime, int], output_dir: str):
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
         alert_id = alert["DEVICE_TRACE_BEGIN_SEQ"]
@@ -181,10 +183,8 @@ def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_t
         logger.info(f"Saved packet trace for alert {alert_id} to {output_path}")
         
 
-    
 def sanitize_string_for_using_as_filename(s: str) -> str:
     return re.sub(r'[^a-zA-Z0-9]', '_', s)
-
 
 
 # Set up logging
