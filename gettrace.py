@@ -13,6 +13,7 @@ import time
 import sys
 import logging
 import tempfile
+from scapy.all import rdpcap
 import requests
 from datetime import datetime
 from typing import  Union, Dict, List, Optional, Any, Tuple
@@ -156,11 +157,17 @@ class SMSClient:
             return pcap_response.content
 
 
+def hash_normalized_pcap(pcap_file):
+    packets = rdpcap(pcap_file)
+    payloads = b"".join(bytes(pkt) for pkt in packets)
+    return hashlib.sha1(payloads).hexdigest()
+
+
 def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_time: Union[datetime, int], output_dir: str):
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
         alert_id = alert["DEVICE_TRACE_BEGIN_SEQ"]
         pcap_data = sms.get_traffic_capture(alert_id)
-        pcap_data_sha1 = hashlib.sha1(pcap_data).hexdigest()
+        pcap_data_sha1 = hash_normalized_pcap(pcap_data)
         alert_description = sms.get_signature(alert["SIGNATURE_ID"]).DESCRIPTION
         alert_description = sanitize_string_for_using_as_filename(alert_description)
         output_filename = f"{alert_id}_{pcap_data_sha1}.pcap"
@@ -182,8 +189,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('sms_traffic_capture')
-
-
 
 
 if __name__ == "__main__":
