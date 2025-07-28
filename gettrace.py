@@ -145,19 +145,17 @@ class SMSClient:
         return self.signatures.get(signature_id)
 
     def get_traffic_capture(self, alert_id: str):
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
-            print(F"Alert ID: {alert_id}")
-            temp_file.write(f"{alert_id}\n")
-            temp_file_path = temp_file.name
+#        with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp_file:
+#            print(F"Alert ID: {alert_id}")
+#            temp_file.write(f"{alert_id}\n")
+#            temp_file_path = temp_file.name
         
         logger.info(f"Downloading packet trace for alert {alert_id}...")
         
         pcap_url = "/pcaps/getByEventIds"
-        with open(temp_file_path, 'rb') as f:
-            files = {'file': f}
-            pcap_response = self.post(pcap_url, files=files)
-            pcap_response.raise_for_status()
-            return pcap_response.content
+        pcap_response = self.post(pcap_url, data=alert_id)
+        pcap_response.raise_for_status()
+        return pcap_response.content
 
 
 def hash_normalized_pcap(pcap_data: bytes) -> str:
