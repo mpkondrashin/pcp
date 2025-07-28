@@ -6,6 +6,10 @@ This module provides functionality to download traffic captures for alerts
 from a TippingPoint Security Management System (SMS) within a specified time interval.
 """
 
+from io import BytesIO
+from scapy.all import rdpcap
+import hashlib
+
 import os
 import re
 import csv
@@ -13,14 +17,12 @@ import time
 import sys
 import logging
 import tempfile
-from scapy.all import rdpcap
 import requests
 from datetime import datetime
 from typing import  Union, Dict, List, Optional, Any, Tuple
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from collections import namedtuple
-import hashlib
 import http.client as http_client
 #http_client.HTTPConnection.debuglevel = 1
 
