@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
+
 from io import BytesIO
 from scapy.all import rdpcap
 import hashlib
-
 import os
 import re
-import csv
-import time
-import sys
 import logging
-import tempfile
 import requests
-from datetime import datetime
-from typing import  Union, Dict, List, Optional, Any, Tuple
+from typing import  Dict, Optional, Tuple
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from collections import namedtuple
 import http.client as http_client
-http_client.HTTPConnection.debuglevel = 1
-
-Signature = namedtuple("Signature", ["ID","NUM","SEVERITY_ID","NAME","CLASS","PRODUCT_CATEGORY_ID","PROTOCOL","TAXONOMY_ID","CVE_ID","BUGTRAQ_ID","DESCRIPTION","MESSAGE"])
+# temporary commented out http_client.HTTPConnection.debuglevel = 1
 
 class SMSClient:
     def __init__(
@@ -52,7 +45,6 @@ class SMSClient:
       
     def get_traffic_capture(self, alert_id: str):        
         logger.info(f"Downloading packet trace for alert {alert_id}...")
-        
         pcap_url = "/pcaps/getByEventIds"
         pcap_response = self.post(pcap_url, data=alert_id)
         pcap_response.raise_for_status()
@@ -74,8 +66,6 @@ def get_traffic_captures(sms: SMSClient, syslog_file: str, output_dir: str):
                 continue
             alert_text = match.group(1)
             event_id = match.group(2)
-            print("Alert:", alert_text)
-            print("Event ID:", event_id)
             get_traffic_capture(sms, event_id, alert_text, output_dir)
 
 def get_traffic_capture(sms: SMSClient, alert_id: str, alert_text: str, output_dir: str):
@@ -95,8 +85,6 @@ def get_traffic_capture(sms: SMSClient, alert_id: str, alert_text: str, output_d
 def sanitize_string_for_using_as_filename(s: str) -> str:
     return re.sub(r'[^a-zA-Z0-9]', '_', s)
 
-
-# Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
