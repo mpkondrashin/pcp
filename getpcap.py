@@ -121,6 +121,6 @@ if __name__ == "__main__":
 
     get_traffic_captures(
         sms,
+        args.syslog_file,
         args.output_dir,
-        args.syslog_file
     )
