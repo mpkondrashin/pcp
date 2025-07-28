@@ -5,7 +5,6 @@ from scapy.all import rdpcap
 import hashlib
 import os
 import re
-import logging
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from collections import namedtuple
@@ -23,7 +22,7 @@ def rename_pcaps(syslog_file: str, output_dir: str):
         for line in f:
             match = re.search(r'alert=(.+?)\s+alertId=([^\s]+)', line)
             if not match:
-                logger.warning(f"No match found for line: {line}")
+                print(f"No match found for line: {line}")
                 continue
             alert_text = match.group(1)
             alert_id = match.group(2)
@@ -37,17 +36,20 @@ def rename_pcap(alert_id, alert_text, output_dir):
         return
     print(f"File exists {file_name}")
     pcap_data = open(file_name, "rb").read()
+    print(f"Got PCAP data {len(pcap_data)}")
     if len(pcap_data) == 0:
+        print(f"Remove empty file {file_name}")
         os.remove(file_name)
         print(f"Removed empty file {file_name}")
         return
     try:
         if "Exception upload exception getting the eventIds file" in pcap_data.decode("utf-8"):
+            print(f"Remove file {file_name}")
             os.remove(file_name)
             print(f"Removed file {file_name}")
             return
     except UnicodeDecodeError:
-        return
+        pass
     print("File is not empty")
     pcap_data_sha1 = hash_normalized_pcap(pcap_data)
     alert_text = sanitize_string_for_using_as_filename(alert_text)
@@ -59,12 +61,6 @@ def rename_pcap(alert_id, alert_text, output_dir):
 
 def sanitize_string_for_using_as_filename(s: str) -> str:
     return re.sub(r'[^a-zA-Z0-9]', '_', s)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('sms_traffic_capture')
 
 
 if __name__ == "__main__":
