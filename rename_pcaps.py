@@ -30,6 +30,7 @@ def rename_pcaps(syslog_file: str, output_dir: str):
             rename_pcap(alert_id, alert_text, output_dir)
 
 def rename_pcap(alert_id, alert_text, output_dir):
+    print(f"Rename PCAP {alert_id} {alert_text}")
     file_name = os.path.join(output_dir, alert_id + ".pcap")
     if not os.path.exists(file_name):
         logger.warning(f"File {file_name} does not exist")
