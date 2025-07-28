@@ -7,6 +7,7 @@ import os
 import re
 import logging
 import requests
+import time
 from typing import  Dict, Optional, Tuple
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -69,6 +70,7 @@ def get_traffic_captures(sms: SMSClient, syslog_file: str, output_dir: str):
             get_traffic_capture(sms, alert_id, alert_text, output_dir)
 
 def get_traffic_capture(sms: SMSClient, alert_id: str, alert_text: str, output_dir: str):
+    time.sleep(0.1)
     pcap_data = sms.get_traffic_capture(alert_id)
     if len(pcap_data) == 0:
         logger.warning(f"No packet trace found for alert {alert_id}")
