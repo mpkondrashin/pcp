@@ -58,16 +58,16 @@ def hash_normalized_pcap(pcap_data: bytes) -> str:
 
 
 def get_traffic_captures(sms: SMSClient, syslog_file: str, output_dir: str):
-    syslog_format_regex = "alert=.* eventId=.*"
+    syslog_format_regex = "alert=.* alertId=.*"
     with open(syslog_file) as f:
         for line in f:
-            match = re.search(r'alert=([^\s]+)\s+eventId=([^\s]+)', line)
+            match = re.search(r'alert=([^\s]+)\s+alertId=([^\s]+)', line)
             if not match:
                 logger.warning(f"No match found for line: {line}")
                 continue
             alert_text = match.group(1)
-            event_id = match.group(2)
-            get_traffic_capture(sms, event_id, alert_text, output_dir)
+            alert_id = match.group(2)
+            get_traffic_capture(sms, alert_id, alert_text, output_dir)
 
 def get_traffic_capture(sms: SMSClient, alert_id: str, alert_text: str, output_dir: str):
     pcap_data = sms.get_traffic_capture(alert_id)
