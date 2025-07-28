@@ -31,10 +31,17 @@ def rename_pcaps(syslog_file: str, output_dir: str):
 
 def rename_pcap(alert_id, alert_text, output_dir):
     file_name = os.path.join(output_dir, alert_id + ".pcap")
+    if not os.path.exists(file_name):
+        logger.warning(f"File {file_name} does not exist")
+        return
     pcap_data = open(file_name, "rb").read()
     if len(pcap_data) == 0:
         os.remove(file_name)
         logger.warning(f"Removed empty file {file_name}")
+        return
+    if "Exception upload exception getting the eventIds file" in pcap_data.decode("utf-8"):
+        os.remove(file_name)
+        logger.warning(f"Removed file {file_name}")
         return
     pcap_data_sha1 = hash_normalized_pcap(pcap_data)
     alert_text = sanitize_string_for_using_as_filename(alert_text)
