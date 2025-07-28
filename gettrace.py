@@ -167,18 +167,22 @@ def hash_normalized_pcap(pcap_data: bytes) -> str:
 def get_traffic_captures(sms: SMSClient, start_time: Union[datetime, int], end_time: Union[datetime, int], output_dir: str):
     for alert in sms.iterate_alerts_with_packet_trace(start_time, end_time):
         alert_id = alert["DEVICE_TRACE_BEGIN_SEQ"]
-        pcap_data = sms.get_traffic_capture(alert_id)
-        if len(pcap_data) == 0:
-            logger.warning(f"No packet trace found for alert {alert_id}")
-            continue
-        pcap_data_sha1 = hash_normalized_pcap(pcap_data)
-        alert_description = sms.get_signature(alert["SIGNATURE_ID"]).DESCRIPTION
-        alert_description = sanitize_string_for_using_as_filename(alert_description)
-        output_filename = f"{alert_id}_{pcap_data_sha1}.pcap"
-        output_path = os.path.join(output_dir, output_filename)
-        with open(output_path, 'wb') as f:
-            f.write(pcap_data)
-        logger.info(f"Saved packet trace for alert {alert_id} to {output_path}")
+        print(alert)
+        get_traffic_capture(sms, alert_id, output_dir)
+
+def get_traffic_capture(sms: SMSClient, alert_id: str, output_dir: str):
+    pcap_data = sms.get_traffic_capture(alert_id)
+    if len(pcap_data) == 0:
+        logger.warning(f"No packet trace found for alert {alert_id}")
+        return
+    pcap_data_sha1 = hash_normalized_pcap(pcap_data)
+    alert_description = sms.get_signature(alert["SIGNATURE_ID"]).DESCRIPTION
+    alert_description = sanitize_string_for_using_as_filename(alert_description)
+    output_filename = f"{alert_id}_{pcap_data_sha1}.pcap"
+    output_path = os.path.join(output_dir, output_filename)
+    with open(output_path, 'wb') as f:
+        f.write(pcap_data)
+    logger.info(f"Saved packet trace for alert {alert_id} to {output_path}")
         
 
 def sanitize_string_for_using_as_filename(s: str) -> str:
