@@ -54,7 +54,7 @@ def rename_pcap(alert_id, alert_text, output_dir):
     output_filename = f"{alert_text}_{pcap_data_sha1}.pcap"
     output_path = os.path.join(output_dir, output_filename)
     os.rename(file_name, output_path)
-    logger.info(f"Renamed {file_name} to {output_path}")
+    print(f"Renamed {file_name} to {output_path}")
         
 
 def sanitize_string_for_using_as_filename(s: str) -> str:
